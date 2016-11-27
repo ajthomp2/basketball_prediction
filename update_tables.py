@@ -81,6 +81,7 @@ player_links = []
 gen_info_player_links = []
 player_link_to_player_id = {}
 next_p_id = 1
+next_game_id = 1
 last_date = datetime.today()
 
 # *********     PLAYER STATS COLUMNS     ********* #
@@ -220,6 +221,14 @@ def set_next_p_id(c):
     result = c.fetchall()
     global next_p_id
     next_p_id = int(result[0][0]) + 1
+
+
+def set_next_game_id(c):
+    c.execute('''SELECT MAX(GameID)
+                 FROM TeamGameStatsYTD''')
+    result = c.fetchall()
+    global next_game_id
+    next_game_id = int(result[0][0]) + 1
 
 
 def get_last_date_updated(c):
@@ -441,7 +450,16 @@ def scrape_on_off_stats(soup, link, gametype, season):
     return on_off_stats
 
 
-def scrape_and_update_player_stats(c):
+def delete_player_stats_table_rows(c, tablename, playerid, season, gametypeid, teamid):
+    c.execute('''DELETE FROM {tn}
+                 WHERE PlayerID = {pid} AND
+                 Season = {s} AND
+                 GameTypeID = {gtid} AND
+                 TeamID = {tid};
+    '''.format(tn=tablename, pid=playerid, s=season, gtid=gametypeid, tid=teamid))
+
+
+def scrape_and_update_player_stats(c, con):
     base_addr = 'http://www.basketball-reference.com'
     general_info, per_36_min_stats, per_100_pos_stats, adv_stats = [], [], [], []
     per_game_stats, shooting_stats, pbp_stats, on_off_stats = [], [], [], []
@@ -500,27 +518,54 @@ def scrape_and_update_player_stats(c):
         general_info_df = pd.DataFrame(data=general_info, columns=general_player_info_cols)
         general_info_df.set_index('PlayerID', inplace=True, verify_integrity=True)
         general_info_df.to_sql(name='GeneralPlayerInfo', con=c, if_exists='append')
-    per_game_stats_df = pd.DataFrame(data=per_game_stats, columns=per_game_cols)
-    per_36_mins_df = pd.DataFrame(data=per_36_min_stats, columns=per_36_min_cols)
-    per_100_pos_df = pd.DataFrame(data=per_100_pos_stats, columns=per_100_poss_cols)
-    adv_stats_df = pd.DataFrame(data=adv_stats, columns=adv_cols)
-    shooting_stats_df = pd.DataFrame(data=shooting_stats, columns=shooting_cols)
-    pbp_stats_df = pd.DataFrame(data=pbp_stats, columns=pbp_cols)
-    on_off_stats_df = pd.DataFrame(data=on_off_stats, columns=on_off_cols)
 
-    per_game_stats_df.to_sql(name='PlayerSeasonStatsPerGameYTD', con=c, if_exists='append', index=False)
-    adv_stats_df.to_sql(name='PlayerSeasonAdvStatsYTD', con=c, if_exists='append', index=False)
-    on_off_stats_df.to_sql(name='PlayerSeasonOnOffStatsYTD', con=c, if_exists='append', index=False)
-    pbp_stats_df.to_sql(name='PlayerSeasonPBPStatsYTD', con=c, if_exists='append', index=False)
-    per_36_mins_df.to_sql(name='PlayerSeasonStatsPer36MinutesYTD', con=c, if_exists='append', index=False)
-    per_100_pos_df.to_sql(name='PlayerSeasonStatsPer100PossYTD', con=c, if_exists='append', index=False)
-    shooting_stats_df.to_sql(name='PlayerSeasonShootingStatsYTD', con=c, if_exists='append', index=False)
+    per_game_stats_df = pd.DataFrame(data=per_game_stats, columns=per_game_cols)
+    for ind, row in per_game_stats_df.iterrows():
+        delete_player_stats_table_rows(c, 'PlayerSeasonStatsPerGameYTD', row['PlayerID'], row['Season'],
+                                       row['GameTypeID'], row['TeamID'])
+    per_game_stats_df.to_sql(name='PlayerSeasonStatsPerGameYTD', con=con, if_exists='append', index=False)
+
+    per_36_mins_df = pd.DataFrame(data=per_36_min_stats, columns=per_36_min_cols)
+    for ind, row in per_36_mins_df.iterrows():
+        delete_player_stats_table_rows(c, 'PlayerSeasonStatsPer36MinutesYTD', row['PlayerID'], row['Season'],
+                                       row['GameTypeID'], row['TeamID'])
+    per_36_mins_df.to_sql(name='PlayerSeasonStatsPer36MinutesYTD', con=con, if_exists='append', index=False)
+
+    per_100_pos_df = pd.DataFrame(data=per_100_pos_stats, columns=per_100_poss_cols)
+    for ind, row in per_100_pos_df.iterrows():
+        delete_player_stats_table_rows(c, 'PlayerSeasonStatsPer100PossYTD', row['PlayerID'], row['Season'],
+                                       row['GameTypeID'], row['TeamID'])
+    per_100_pos_df.to_sql(name='PlayerSeasonStatsPer100PossYTD', con=con, if_exists='append', index=False)
+
+    adv_stats_df = pd.DataFrame(data=adv_stats, columns=adv_cols)
+    for ind, row in adv_stats_df.iterrows():
+        delete_player_stats_table_rows(c, 'PlayerSeasonAdvStatsYTD', row['PlayerID'], row['Season'],
+                                       row['GameTypeID'], row['TeamID'])
+    adv_stats_df.to_sql(name='PlayerSeasonAdvStatsYTD', con=con, if_exists='append', index=False)
+
+    shooting_stats_df = pd.DataFrame(data=shooting_stats, columns=shooting_cols)
+    for ind, row in shooting_stats_df.iterrows():
+        delete_player_stats_table_rows(c, 'PlayerSeasonShootingStatsYTD', row['PlayerID'], row['Season'],
+                                       row['GameTypeID'], row['TeamID'])
+    shooting_stats_df.to_sql(name='PlayerSeasonShootingStatsYTD', con=con, if_exists='append', index=False)
+
+    pbp_stats_df = pd.DataFrame(data=pbp_stats, columns=pbp_cols)
+    for ind, row in pbp_stats_df.iterrows():
+        delete_player_stats_table_rows(c, 'PlayerSeasonPBPStatsYTD', row['PlayerID'], row['Season'],
+                                       row['GameTypeID'], row['TeamID'])
+    pbp_stats_df.to_sql(name='PlayerSeasonPBPStatsYTD', con=con, if_exists='append', index=False)
+
+    on_off_stats_df = pd.DataFrame(data=on_off_stats, columns=on_off_cols)
+    for ind, row in on_off_stats_df.iterrows():
+        delete_player_stats_table_rows(c, 'PlayerSeasonOnOffStatsYTD', row['PlayerID'], row['Season'],
+                                       row['GameTypeID'], row['TeamID'])
+    on_off_stats_df.to_sql(name='PlayerSeasonOnOffStatsYTD', con=con, if_exists='append', index=False)
 
 
 # **************************************************************************************************************** #
 # **************************************************************************************************************** #
 #
-#                                   SCRAPE PLAYER STATS
+#                                   SCRAPE TEAM STATS
 #
 # **************************************************************************************************************** #
 # **************************************************************************************************************** #
@@ -624,8 +669,11 @@ def scrape_team_lineups(soup, team, year):
 
     return team_lineups
 
+def delete_all_team_table_rows(c, tablename):
+    c.execute('''DELETE FROM {};'''.format(tablename))
 
-def scrape_and_update_team_stats(c):
+
+def scrape_and_update_team_stats(c, con):
     base_addr = 'http://www.basketball-reference.com/teams/'
     general_info, team_stats, opp_stats, team_adv_stats, team_lineups = [], [], [], [], []
     for team in teams:
@@ -662,16 +710,20 @@ def scrape_and_update_team_stats(c):
     # general_info_df.set_index(['TeamID', 'Season'], inplace=True, verify_integrity=True)
     # general_info_df.to_sql(name='GeneralTeamSeasonInfo', con=c, if_exists='append')
 
+    delete_all_team_table_rows(c, 'TeamSeasonAdvStatsYTD')
     team_adv_stats_df.set_index(['TeamID', 'Season'], inplace=True, verify_integrity=True)
-    team_adv_stats_df.to_sql(name='TeamSeasonAdvStatsYTD', con=c, if_exists='append')
+    team_adv_stats_df.to_sql(name='TeamSeasonAdvStatsYTD', con=con, if_exists='append')
 
-    team_lineups_df.to_sql(name='TeamSeasonLineupStatsYTD', con=c, if_exists='append', index=False)
+    delete_all_team_table_rows(c, 'TeamSeasonLineupStatsYTD')
+    team_lineups_df.to_sql(name='TeamSeasonLineupStatsYTD', con=con, if_exists='append', index=False)
 
+    delete_all_team_table_rows(c, 'TeamSeasonStatsYTD')
     team_stats_df.set_index(['TeamID', 'Season'], inplace=True, verify_integrity=True)
-    team_stats_df.to_sql(name='TeamSeasonStatsYTD', con=c, if_exists='append')
+    team_stats_df.to_sql(name='TeamSeasonStatsYTD', con=con, if_exists='append')
 
+    delete_all_team_table_rows(c, 'TeamOppSeasonStatsYTD')
     opp_stats_df.set_index(['TeamID', 'Season'], inplace=True, verify_integrity=True)
-    opp_stats_df.to_sql(name='TeamOppSeasonStatsYTD', con=c, if_exists='append')
+    opp_stats_df.to_sql(name='TeamOppSeasonStatsYTD', con=con, if_exists='append')
 
 
 # **************************************************************************************************************** #
@@ -985,9 +1037,9 @@ def get_home_away_teams(header, year):
 
 def scrape_and_update_game_stats(c):
     base_addr = 'http://www.basketball-reference.com'
-    game_id = 20598
     team_game_stats, player_game_stats = [], []
     end_flag = False
+    global next_game_id
 
     year = 2017
     for month in months:
@@ -1021,12 +1073,12 @@ def scrape_and_update_game_stats(c):
                         print(e.code)
                         continue
                     soup = BeautifulSoup(resp.read(), 'lxml')
-                    home_team_stats, away_team_stats = scrape_team_stats_per_game(soup, game_id, year)
+                    home_team_stats, away_team_stats = scrape_team_stats_per_game(soup, next_game_id, year)
                     team_game_stats.append(home_team_stats)
                     team_game_stats.append(away_team_stats)
-                    basic_player_stats = scrape_player_stats_per_game(soup, game_id, year)
+                    basic_player_stats = scrape_player_stats_per_game(soup, next_game_id, year)
                     player_game_stats += basic_player_stats
-                    game_id += 1
+                    next_game_id += 1
         if end_flag:
             break
 
@@ -1056,10 +1108,11 @@ def main():
     get_player_links_from_gen_info(c)
     set_next_p_id(c)
     get_last_date_updated(c)
+    set_next_game_id(c)
 
     scrape_and_update_game_stats(conn)
-    scrape_and_update_player_stats(conn)
-    scrape_and_update_team_stats(conn)
+    scrape_and_update_player_stats(c, conn)
+    scrape_and_update_team_stats(c, conn)
 
     conn.commit()
     conn.close()
