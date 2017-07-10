@@ -1,19 +1,14 @@
 from bs4 import BeautifulSoup
-from bs4 import Comment
 import pandas as pd
-import numpy as np
 from urllib.request import urlopen
 from urllib.error import HTTPError
-import requests
-import sqlite3 as lite
-import sys
 
-#********************************************************#
-#********************************************************#
+# ******************************************************** #
+# ******************************************************** #
 # NOTES:
 #
-#********************************************************#
-#********************************************************#
+# ******************************************************** #
+# ******************************************************** #
 
 
 teams_to_abbr = {'Atlanta Hawks' : 'ATL', 'Boston Celtics' : 'BOS', 'Brooklyn Nets' : 'BRK',
@@ -59,8 +54,6 @@ abbr_to_team_id = {'ATL': 1, 'BOS': 2, 'BRK': 3, 'CHH': 4, 'CHI': 5, 'CLE': 6,
                  'NOP': 19, 'NYK': 20, 'OKC' : 21, 'ORL': 22, 'PHI': 23, 'PHO': 24,
                  'POR': 25, 'SAC': 26, 'SAS' : 27, 'TOR': 28, 'UTA': 29, 'WAS' : 30,
                  'NJN': 3, 'CHA': 4, 'CHO': 4, 'VAN' : 15, 'NOK': 19, 'SEA': 21}
-
-def scrape_general_player_info(soup):
 
 
 def get_player_links():

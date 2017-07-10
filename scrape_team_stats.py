@@ -28,7 +28,7 @@ teams_to_abbr = {'Atlanta Hawks' : 'ATL', 'Boston Celtics' : 'BOS', 'Brooklyn Ne
                  'Toronto Raptors' : 'TOR', 'Utah Jazz' : 'UTA', 'Washington Wizards' : 'WAS',
                  'New Jersey Nets' : 'NJN', 'Charlotte Bobcats' : 'CHA', 'Vancouver Grizzlies' : 'VAN',
                  'New Orleans/Oklahoma City Hornets' : 'NOK', 'Seattle SuperSonics' : 'SEA',
-                 'New Orleans Hornets' : 'NOK'}
+                 'New Orleans Hornets' : 'NOH'}
 abbr_to_teams = {'ATL' : 'Atlanta Hawks', 'BOS' : 'Boston Celtics', 'BRK' : 'Brooklyn Nets',
                  'CHH' : 'Charlotte Hornets', 'CHI' : 'Chicago Bulls', 'CLE' : 'Cleveland Cavaliers',
                  'DAL' : 'Dallas Mavericks', 'DEN' : 'Denver Nuggets', 'DET' : 'Detroit Pistons',
@@ -40,7 +40,8 @@ abbr_to_teams = {'ATL' : 'Atlanta Hawks', 'BOS' : 'Boston Celtics', 'BRK' : 'Bro
                  'POR' : 'Portland Trail Blazers', 'SAC' : 'Sacramento Kings', 'SAS' : 'San Antonio Spurs',
                  'TOR' : 'Toronto Raptors', 'UTA' : 'Utah Jazz', 'WAS' : 'Washington Wizards',
                  'NJN' : 'New Jersey Nets', 'CHA' : 'Charlotte Bobcats', 'VAN' : 'Vancouver Grizzlies',
-                 'NOK' : 'New Orleans/Oklahoma City Hornets', 'SEA' : 'Seattle SuperSonics', 'CHO' : 'Charlotte Hornets'}
+                 'NOK' : 'New Orleans/Oklahoma City Hornets', 'SEA' : 'Seattle SuperSonics', 'CHO': 'Charlotte Hornets',
+                 'NOH' : 'New Orleans Hornets'}
 teams_to_team_id = {'Atlanta Hawks' : 1, 'Boston Celtics' : 2, 'Brooklyn Nets' : 3,
                  'Charlotte Hornets' : 4, 'Chicago Bulls' : 5, 'Cleveland Cavaliers' : 6,
                  'Dallas Mavericks' : 7, 'Denver Nuggets' : 8, 'Detroit Pistons' : 9,
@@ -52,13 +53,13 @@ teams_to_team_id = {'Atlanta Hawks' : 1, 'Boston Celtics' : 2, 'Brooklyn Nets' :
                  'Portland Trail Blazers' : 25, 'Sacramento Kings' : 26, 'San Antonio Spurs' : 27,
                  'Toronto Raptors' : 28, 'Utah Jazz' : 29, 'Washington Wizards' : 30,
                  'New Jersey Nets' : 3, 'Charlotte Bobcats' : 4, 'Vancouver Grizzlies' : 15,
-                 'New Orleans/Oklahoma City Hornets' : 19, 'Seattle SuperSonics' : 21}
+                 'New Orleans/Oklahoma City Hornets': 19, 'Seattle SuperSonics' : 21, 'New Orleans Hornets': 19}
 abbr_to_team_id = {'ATL': 1, 'BOS': 2, 'BRK': 3, 'CHH': 4, 'CHI': 5, 'CLE': 6,
                  'DAL': 7, 'DEN': 8, 'DET': 9, 'GSW': 10, 'HOU': 11, 'IND': 12,
                  'LAC': 13, 'LAL': 14, 'MEM' : 15, 'MIA': 16, 'MIL': 17, 'MIN': 18,
                  'NOP': 19, 'NYK': 20, 'OKC' : 21, 'ORL': 22, 'PHI': 23, 'PHO': 24,
                  'POR': 25, 'SAC': 26, 'SAS' : 27, 'TOR': 28, 'UTA': 29, 'WAS' : 30,
-                 'NJN': 3, 'CHA': 4, 'CHO': 4, 'VAN' : 15, 'NOK': 19, 'SEA': 21}
+                 'NJN': 3, 'CHA': 4, 'CHO': 4, 'VAN' : 15, 'NOK': 19, 'SEA': 21, 'NOH': 19}
 
 division_to_div_id = {'Atlantic' : 1, 'Central' : 2, 'Southeast' : 3,
                       'Northwest' : 4, 'Pacific' : 5, 'Southwest' : 6, 'Midwest' : 7}
@@ -83,6 +84,7 @@ team_stats_cols = ['Team', 'TeamID', 'Season', 'FG', 'FGA', 'FG%', '3P', '3PA', 
 team_adv_cols = ['Team', 'TeamID', 'Season', 'PW', 'PL', 'MOV', 'SOS', 'SRS', 'ORtg', 'DRtg',
                  'Pace', 'FTr', '3PAr', 'eFG%', 'TOV%', 'ORB%', 'FT/FGA', 'eFG%A', 'TOV%A',
                  'DRB%A', 'FT/FGAA']
+
 
 def scrape_team_general_info(soup, team, year):
     general_info = [team, abbr_to_team_id[team], year]

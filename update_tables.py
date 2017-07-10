@@ -3,79 +3,32 @@ from bs4 import Comment
 import pandas as pd
 from urllib.request import urlopen
 from urllib.error import HTTPError
-import sqlite3 as lite
+import pymysql as sql
+from sqlalchemy import create_engine
 from datetime import datetime
 import numpy as np
-import os
+import smtplib
+import team_names_and_ids
+import table_column_names
+import gen_bball_info
+import email_config
+import rds_config
 
-# ********************************************************#
-# ********************************************************#
+# **************************************************************************************************************** #
+# **************************************************************************************************************** #
 # NOTES:
 #
-# ********************************************************#
-# ********************************************************#
+# **************************************************************************************************************** #
+# **************************************************************************************************************** #
 
 
-teams_to_abbr = {'Atlanta Hawks': 'ATL', 'Boston Celtics': 'BOS', 'Brooklyn Nets': 'BRK',
-                 'Charlotte Hornets': 'CHH', 'Chicago Bulls': 'CHI', 'Cleveland Cavaliers': 'CLE',
-                 'Dallas Mavericks': 'DAL', 'Denver Nuggets': 'DEN', 'Detroit Pistons': 'DET',
-                 'Golden State Warriors': 'GSW', 'Houston Rockets': 'HOU', 'Indiana Pacers': 'IND',
-                 'Los Angeles Clippers': 'LAC', 'Los Angeles Lakers': 'LAL', 'Memphis Grizzlies': 'MEM',
-                 'Miami Heat': 'MIA', 'Milwaukee Bucks': 'MIL', 'Minnesota Timberwolves': 'MIN',
-                 'New Orleans Pelicans': 'NOP', 'New York Knicks': 'NYK', 'Oklahoma City Thunder': 'OKC',
-                 'Orlando Magic': 'ORL', 'Philadelphia 76ers': 'PHI', 'Phoenix Suns': 'PHO',
-                 'Portland Trail Blazers': 'POR', 'Sacramento Kings': 'SAC', 'San Antonio Spurs': 'SAS',
-                 'Toronto Raptors': 'TOR', 'Utah Jazz': 'UTA', 'Washington Wizards': 'WAS',
-                 'New Jersey Nets': 'NJN', 'Charlotte Bobcats': 'CHA', 'Vancouver Grizzlies': 'VAN',
-                 'New Orleans/Oklahoma City Hornets': 'NOK', 'Seattle SuperSonics': 'SEA',
-                 'New Orleans Hornets': 'NOK'}
-abbr_to_teams = {'ATL': 'Atlanta Hawks', 'BOS': 'Boston Celtics', 'BRK': 'Brooklyn Nets',
-                 'CHH': 'Charlotte Hornets', 'CHI': 'Chicago Bulls', 'CLE': 'Cleveland Cavaliers',
-                 'DAL': 'Dallas Mavericks', 'DEN': 'Denver Nuggets', 'DET': 'Detroit Pistons',
-                 'GSW': 'Golden State Warriors', 'HOU': 'Houston Rockets', 'IND': 'Indiana Pacers',
-                 'LAC': 'Los Angeles Clippers', 'LAL': 'Los Angeles Lakers', 'MEM': 'Memphis Grizzlies',
-                 'MIA': 'Miami Heat', 'MIL': 'Milwaukee Bucks', 'MIN': 'Minnesota Timberwolves',
-                 'NOP': 'New Orleans Pelicans', 'NYK': 'New York Knicks', 'OKC': 'Oklahoma City Thunder',
-                 'ORL': 'Orlando Magic', 'PHI': 'Philadelphia 76ers', 'PHO': 'Phoenix Suns',
-                 'POR': 'Portland Trail Blazers', 'SAC': 'Sacramento Kings', 'SAS': 'San Antonio Spurs',
-                 'TOR': 'Toronto Raptors', 'UTA': 'Utah Jazz', 'WAS': 'Washington Wizards',
-                 'NJN': 'New Jersey Nets', 'CHA': 'Charlotte Bobcats', 'VAN': 'Vancouver Grizzlies',
-                 'NOK': 'New Orleans/Oklahoma City Hornets', 'SEA': 'Seattle SuperSonics',
-                 'CHO': 'Charlotte Hornets'}
-teams_to_team_id = {'Atlanta Hawks': 1, 'Boston Celtics': 2, 'Brooklyn Nets': 3,
-                    'Charlotte Hornets': 4, 'Chicago Bulls': 5, 'Cleveland Cavaliers': 6,
-                    'Dallas Mavericks': 7, 'Denver Nuggets': 8, 'Detroit Pistons': 9,
-                    'Golden State Warriors': 10, 'Houston Rockets': 11, 'Indiana Pacers': 12,
-                    'Los Angeles Clippers': 13, 'Los Angeles Lakers': 14, 'Memphis Grizzlies': 15,
-                    'Miami Heat': 16, 'Milwaukee Bucks': 17, 'Minnesota Timberwolves': 18,
-                    'New Orleans Pelicans': 19, 'New York Knicks': 20, 'Oklahoma City Thunder': 21,
-                    'Orlando Magic': 22, 'Philadelphia 76ers': 23, 'Phoenix Suns': 24,
-                    'Portland Trail Blazers': 25, 'Sacramento Kings': 26, 'San Antonio Spurs': 27,
-                    'Toronto Raptors': 28, 'Utah Jazz': 29, 'Washington Wizards': 30,
-                    'New Jersey Nets': 3, 'Charlotte Bobcats': 4, 'Vancouver Grizzlies': 15,
-                    'New Orleans/Oklahoma City Hornets': 19, 'Seattle SuperSonics': 21,
-                    'New Orleans Hornets': 19}
-abbr_to_team_id = {'ATL': 1, 'BOS': 2, 'BRK': 3, 'CHH': 4, 'CHI': 5, 'CLE': 6,
-                   'DAL': 7, 'DEN': 8, 'DET': 9, 'GSW': 10, 'HOU': 11, 'IND': 12,
-                   'LAC': 13, 'LAL': 14, 'MEM': 15, 'MIA': 16, 'MIL': 17, 'MIN': 18,
-                   'NOP': 19, 'NYK': 20, 'OKC': 21, 'ORL': 22, 'PHI': 23, 'PHO': 24,
-                   'POR': 25, 'SAC': 26, 'SAS': 27, 'TOR': 28, 'UTA': 29, 'WAS': 30,
-                   'NJN': 3, 'CHA': 4, 'CHO': 4, 'VAN': 15, 'NOK': 19, 'SEA': 21, 'NOH': 19,
-                   'WSB': 30, 'KCK': 26}
-
-positions_to_abbr = {'Point Guard': 'PG', 'Shooting Guard': 'SG', 'Small Forward': 'SF',
-                     'Power Forward': 'PF', 'Center': 'C', np.nan: np.nan}
-
-division_to_div_id = {'Atlantic': 1, 'Central': 2, 'Southeast': 3,
-                      'Northwest': 4, 'Pacific': 5, 'Southwest': 6, 'Midwest': 7}
-conference_to_conf_id = {'Eastern': 1, 'Western': 2}
-
-teams = ['ATL', 'BOS', 'BRK', 'CHH', 'CHI', 'CLE', 'DAL', 'DEN', 'DET', 'GSW', 'HOU', 'IND',
-         'LAC', 'LAL', 'MEM', 'MIA', 'MIL', 'MIN', 'NOP', 'NYK', 'OKC', 'ORL', 'PHI', 'PHO',
-         'POR', 'SAC', 'SAS', 'TOR', 'UTA', 'WAS', 'NJN', 'CHA', 'CHO', 'VAN', 'NOK', 'SEA']
-
-months = ['october', 'november', 'december', 'january',
-          'february', 'march', 'april', 'may', 'june']
+# **************************************************************************************************************** #
+# **************************************************************************************************************** #
+#
+#                                   GLOBAL VARIABLES
+#
+# **************************************************************************************************************** #
+# **************************************************************************************************************** #
 
 player_links = []
 gen_info_player_links = []
@@ -83,104 +36,6 @@ player_link_to_player_id = {}
 next_p_id = 1
 next_game_id = 1
 last_date = datetime.today()
-
-# *********     PLAYER STATS COLUMNS     ********* #
-
-general_player_info_cols = ['PlayerID', 'Player', 'PlayerLink', 'BirthDate', 'Position1', 'Position2',
-                            'Position3', 'DraftPick', 'Height', 'Weight', 'College']
-
-per_game_cols = ['PlayerID', 'Season', 'GameTypeID', 'Age', 'TeamID', 'MP/G', 'FG/G',
-                 'FGA/G', 'FG%', '3P/G', '3PA/G', '3P%', '2P/G', '2PA/G', '2P%', 'eFG%',
-                 'FT/G', 'FTA/G', 'FT%', 'ORB/G', 'DRB/G', 'TRB/G', 'AST/G', 'STL/G', 'BLK/G',
-                 'TOV/G', 'PF/G', 'PTS/G']
-
-pbp_cols = ['PlayerID', 'Season', 'GameTypeID', 'Age', 'TeamID', 'PG%', 'SG%', 'SF%',
-            'PF%', 'C%', '+/-Per100PossOnCourt', '+/-Per100PossOn-Off', 'BadPassTO', 'LostBallTO',
-            'OtherTO', 'ShootingFoulsCommitted', 'BlockingFoulsCommitted',
-            'OffensiveFoulsCommitted', 'TakeFoulsCommitted', 'PtsGenByAst', 'ShootingFoulsDrawn',
-            'And1s', 'BlockedFGA']
-
-per_36_min_cols = ['PlayerID', 'Season', 'GameTypeID', 'Age', 'TeamID', 'FG/36',
-                   'FGA/36', 'FG%', '3P/36', '3PA/36', '3P%', '2P/36', '2PA/36', '2P%',
-                   'FT/36', 'FTA/36', 'FT%', 'ORB/36', 'DRB/36', 'TRB/36', 'AST/36',
-                   'STL/36', 'BLK/36', 'TOV/36', 'PF/36', 'PTS/36']
-
-per_100_poss_cols = ['PlayerID', 'Season', 'GameTypeID', 'Age', 'TeamID', 'FG/100Poss', 'FGA/100Poss',
-                     'FG%', '3P/100Poss', '3PA/100Poss', '3P%', '2P/100Poss', '2PA/100Poss', '2P%',
-                     'FT/100Poss', 'FTA/100Poss', 'FT%', 'ORB/100Poss', 'DRB/100Poss', 'TRB/100Poss',
-                     'AST/100Poss', 'STL/100Poss', 'BLK/100Poss', 'TOV/100Poss', 'PF/100Poss',
-                     'PTS/100Poss', 'ORtg/100Poss', 'DRtg/100Poss']
-
-shooting_cols = ['PlayerID', 'Season', 'GameTypeID', 'Age', 'TeamID', 'FG%', 'AvgShotDist',
-                 '2PA%', '%FGA0-2ft', '%FGA3-9ft', '%FGA10-15ft', '%FGA16+ft<3', '%FGA3P', '2PFG%',
-                 'FG%0-2ft', 'FG%3-9ft', 'FG%10-15ft', 'FG%16+ft<3', '3PFG%', '%2PAAstByOthers',
-                 '%3PAAstByOthers', '%3PAFromCorner', '3P%FromCorner']
-
-adv_cols = ['PlayerID', 'Season', 'GameTypeID', 'Age', 'TeamID', 'PER', 'TS%', '3PAr',
-            'FTr', 'ORB%', 'DRB%', 'TRB%', 'AST%', 'STL%', 'BLK%', 'TOV%', 'USG%', 'OWS', 'DWS',
-            'WS', 'WS/48', 'OBRM', 'DBPM', 'BPM', 'VORP']
-
-on_off_cols = ['PlayerID', 'Season', 'GameTypeID', 'TeamID', 'OnCourtTeameFG%', 'OnCourtTeamORB%',
-               'OnCourtTeamDRB%', 'OnCourtTeamTRB%', 'OnCourtTeamAST%', 'OnCourtTeamSTL%', 'OnCourtTeamBLK%',
-               'OnCourtTeamTOV%', 'OnCourtTeamORtg', 'OnCourtOppeFG%', 'OnCourtOppORB%', 'OnCourtOppDRB%',
-               'OnCourtOppTRB%', 'OnCourtOppAST%', 'OnCourtOppSTL%', 'OnCourtOppBLK%', 'OnCourtOppTOV%',
-               'OnCourtOppORtg', 'OnCourtDiffeFG%', 'OnCourtDiffORB%', 'OnCourtDiffDRB%', 'OnCourtDiffTRB%',
-               'OnCourtDiffAST%', 'OnCourtDiffSTL%', 'OnCourtDiffBLK%', 'OnCourtDiffTOV%', 'OnCourtDiffORtg',
-               'OffCourtTeameFG%', 'OffCourtTeamORB%', 'OffCourtTeamDRB%', 'OffCourtTeamTRB%', 'OffCourtTeamAST%',
-               'OffCourtTeamSTL%', 'OffCourtTeamBLK%', 'OffCourtTeamTOV%', 'OffCourtTeamORtg', 'OffCourtOppeFG%',
-               'OffCourtOppORB%', 'OffCourtOppDRB%', 'OffCourtOppTRB%', 'OffCourtOppAST%', 'OffCourtOppSTL%',
-               'OffCourtOppBLK%', 'OffCourtOppTOV%', 'OffCourtOppORtg', 'OffCourtDiffeFG%', 'OffCourtDiffORB%',
-               'OffCourtDiffDRB%', 'OffCourtDiffTRB%', 'OffCourtDiffAST%', 'OffCourtDiffSTL%',
-               'OffCourtDiffBLK%', 'OffCourtDiffTOV%', 'OffCourtDiffORtg', 'On-OffTeameFG%', 'On-OffTeamORB%',
-               'On-OffTeamDRB%', 'On-OffTeamTRB%', 'On-OffTeamAST%', 'On-OffTeamSTL%', 'On-OffTeamBLK%',
-               'On-OffTeamTOV%', 'On-OffTeamORtg', 'On-OffOppeFG%', 'On-OffOppORB%', 'On-OffOppDRB%',
-               'On-OffOppTRB%', 'On-OffOppAST%', 'On-OffOppSTL%', 'On-OffOppBLK%', 'On-OffOppTOV%',
-               'On-OffOppORtg', 'On-OffDiffeFG%', 'On-OffDiffORB%', 'On-OffDiffDRB%', 'On-OffDiffTRB%',
-               'On-OffDiffAST%', 'On-OffDiffSTL%', 'On-OffDiffBLK%', 'On-OffDiffTOV%', 'On-OffDiffORtg']
-
-# *********     TEAM STATS COLUMNS     ********* #
-
-team_stats_cols = ['TeamID', 'Season', 'FG/G', 'FGA/G', 'FG%', '3P/G', '3PA/G', '3P%', '2P/G',
-                   '2PA/G', '2P%', 'FT/G', 'FTA/G', 'FT%', 'ORB/G', 'DRB/G', 'TRB/G', 'AST/G', 'STL/G', 'BLK/G',
-                   'TOV/G', 'PF/G', 'PTS/G', 'FG/GYOY%Change', 'FGA/GYOY%Change', 'FG%YOY%Change',
-                   '3P/GYOY%Change', '3PA/GYOY%Change', '3P%YOY%Change',
-                   '2P/GYOY%Change', '2PA/GYOY%Change', '2P%YOY%Change', 'FT/GYOY%Change', 'FTA/GYOY%Change',
-                   'FT%YOY%Change', 'ORB/GYOY%Change', 'DRB/GYOY%Change',
-                   'TRB/GYOY%Change', 'AST/GYOY%Change', 'STL/GYOY%Change', 'BLK/GYOY%Change', 'TOV/GYOY%Change',
-                   'PF/GYOY%Change', 'PTS/GYOY%Change']
-
-team_adv_cols = ['TeamID', 'Season', 'PythWins', 'PythLosses', 'MarginOfVictory', 'StrengthOfSchedule',
-                 'SimpleRatingSystem', 'ORtg', 'DRtg', 'Pace', 'FTr', '3PAr', 'eFG%', 'TOV%', 'ORB%',
-                 'FT/FGA', 'eFG%Against', 'TOV%Against', 'DRB%Against', 'FT/FGAAgainst']
-
-team_lineups_cols = ['TeamID', 'Season', 'GameTypeID', 'NumPlayers', 'Player1ID',
-                     'Player2ID', 'Player3ID', 'Player4ID', 'Player5ID', 'MP', '+/-FG/100Poss',
-                     '+/-FGA/100Poss', '+/-FG%/100Poss', '+/-3P/100Poss', '+/-3PA/100Poss', '+/-3P%/100Poss',
-                     '+/-eFG%/100Poss', '+/-FT/100Poss', '+/-FTA/100Poss', '+/-FT%/100Poss', '+/-PTS/100Poss',
-                     '+/-ORB/100Poss', '+/-ORB%/100Poss', '+/-DRB/100Poss', '+/-DRB%/100Poss', '+/-TRB/100Poss',
-                     '+/-TRB%/100Poss', '+/-AST/100Poss', '+/-STL/100Poss', '+/-BLK/100Poss', '+/-TOV/100Poss',
-                     '+/-PF/100Poss']
-
-team_gen_info_cols = ['TeamID', 'Season', 'Team', 'Games', 'Wins', 'Losses', 'Division', 'DivisionID',
-                      'DivisionRank', 'Conference', 'ConferenceID', 'ConferenceRank',
-                      'HeadCoach1', 'HeadCoach1Wins', 'HeadCoach1Losses', 'HeadCoach2', 'HeadCoach2Wins',
-                      'HeadCoach2Losses', 'Round1Wins', 'Round1Losses', 'Round1Opp', 'Round1Won', 'Round2Wins',
-                      'Round2Losses', 'Round2Opp', 'Round2Won', 'Round3Wins', 'Round3Losses', 'Round3Opp',
-                      'Round3Won', 'Round4Wins', 'Round4Losses', 'Round4Opp', 'Round4Won']
-
-# *********     GAME STATS COLUMNS     ********* #
-
-team_game_stats_cols = ['GameID', 'Season', 'Date', 'GameTypeID', 'Team',
-                        'TeamID', 'Q1Score', 'Q2Score', 'Q3Score', 'Q4Score',
-                        'OTScore', 'FinalScore', 'FG', 'FGA', 'FG%', '3P', '3PA', '3P%',
-                        'FT', 'FTA', 'FT%', 'ORB', 'DRB', 'TRB', 'AST', 'STL', 'BLK', 'TOV',
-                        'PF', 'TS%', 'eFG%', '3PAr', 'FTr', 'ORB%', 'DRB%', 'TRB%', 'AST%',
-                        'STL%', 'BLK%', 'TOV%', 'ORtg', 'DRtg']
-
-player_stats_cols = ['GameID', 'PlayerID', 'PlayerLink', 'TeamID', 'MP', 'FG',
-                     'FGA', 'FG%', '3P', '3PA', '3P%', 'FT', 'FTA', 'FT%', 'ORB', 'DRB', 'TRB',
-                     'AST', 'STL', 'BLK', 'TOV', 'PF', 'PTS', '+/-', 'TS%', 'eFG%', '3PAr', 'FTr',
-                     'ORB%', 'DRB%', 'TRB%', 'AST%', 'STL%', 'BLK%', 'TOV%', 'USG%', 'ORtg', 'DRtg']
 
 
 # **************************************************************************************************************** #
@@ -192,52 +47,126 @@ player_stats_cols = ['GameID', 'PlayerID', 'PlayerLink', 'TeamID', 'MP', 'FG',
 # **************************************************************************************************************** #
 
 
-def open_db(db_file):
-    conn = lite.connect(db_file)
-    print('Opened database in file {} successfully'.format(db_file))
-    return conn
+def open_db():
+    print("Creating DB Connection")
+    sql.install_as_MySQLdb()
+    rds_host = rds_config.db_endpoint
+    name = rds_config.db_username
+    password = rds_config.db_password
+    db_name = rds_config.db_name
+
+    conn_str = "mysql+pymysql://{nm}:{pswrd}@{host}:3306/{dbnm}"\
+        .format(nm=name, pswrd=password, host=rds_host, dbnm=db_name)
+    engine = create_engine(conn_str)
+
+    print("Connection Successful")
+
+    return engine
 
 
 def populate_playerlink_to_playerid_dict(c):
-    c.execute('''SELECT PlayerLink, PlayerID
-                 FROM GeneralPlayerInfo''')
-    result = c.fetchall()
+    result = c.execute("SELECT PlayerLink, PlayerID FROM GeneralPlayerInfo")
+    result = result.fetchall()
 
     global player_link_to_player_id
     player_link_to_player_id = dict(result)
 
 
 def get_player_links_from_gen_info(c):
-    c.execute('''SELECT PlayerLink
-                 FROM GeneralPlayerInfo''')
-    result = c.fetchall()
+    result = c.execute("SELECT PlayerLink FROM GeneralPlayerInfo")
+    result = result.fetchall()
     global gen_info_player_links
     gen_info_player_links = [row[0] for row in result]
 
 
 def set_next_p_id(c):
-    c.execute('''SELECT MAX(PlayerID)
-                 FROM GeneralPlayerInfo''')
-    result = c.fetchall()
+    result = c.execute("SELECT MAX(PlayerID) FROM GeneralPlayerInfo")
+    result = result.fetchall()
     global next_p_id
     next_p_id = int(result[0][0]) + 1
 
 
 def set_next_game_id(c):
-    c.execute('''SELECT MAX(GameID)
-                 FROM TeamGameStatsYTD''')
-    result = c.fetchall()
+    cur_year_result = c.execute("SELECT MAX(GameID) FROM TeamGameStatsYTD")
+    cur_year_result = cur_year_result.fetchall()
+    last_year_result = c.execute("SELECT MAX(GameID) FROM TeamGameStats")
+    last_year_result = last_year_result.fetchall()
     global next_game_id
-    next_game_id = int(result[0][0]) + 1
+    if cur_year_result[0][0]:
+        next_game_id = int(cur_year_result[0][0]) + 1
+    else:
+        next_game_id = int(last_year_result[0][0]) + 1
 
 
 def get_last_date_updated(c):
-    c.execute('''SELECT Date
-                 FROM TeamGameStatsYTD''')
-    result = c.fetchall()
-    dates = [datetime.strptime(row[0], "%Y-%m-%d %H:%M:%S") for row in result]
+    result = c.execute("""SELECT Date
+                 FROM TeamGameStatsYTD""")
+    result = result.fetchall()
+    # dates = [datetime.strptime(row[0], "%Y-%m-%d %H:%M:%S") for row in result]
+    dates = [row[0] for row in result]
     global last_date
-    last_date = max(dates)
+    if dates:
+        last_date = max(dates)
+    else:
+        last_date = datetime.min
+
+
+def send_confirmation_email():
+    gmail_user = 'bballprediction@gmail.com'
+    gmail_pswrd = email_config.password
+
+    _from = gmail_user
+    to = ['alex.thompson6@gmail.com']
+    subject = 'Update Successful'
+    body = 'Database Updated Successfully!'
+
+    email_text = """
+    From: {f}
+    To: {to}
+    Subject: {sub}
+
+    {body}
+    """.format(f=_from, to=', '.join(to), sub=subject, body=body)
+
+    try:
+        server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
+        server.ehlo()
+        server.login(gmail_user, gmail_pswrd)
+        server.sendmail(_from, to, email_text)
+        server.close()
+
+        print('Email Sent!')
+    except Exception:
+        print('Something went wrong...')
+
+
+def send_error_email():
+    gmail_user = 'bballprediction@gmail.com'
+    gmail_pswrd = email_config.password
+
+    _from = gmail_user
+    to = ['alex.thompson6@gmail.com']
+    subject = 'Update Service Error'
+    body = 'Error in database update service.  Please check service errors'
+
+    email_text = """
+    From: {f}
+    To: {to}
+    Subject: {sub}
+
+    {body}
+    """.format(f=_from, to=', '.join(to), sub=subject, body=body)
+
+    try:
+        server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
+        server.ehlo()
+        server.login(gmail_user, gmail_pswrd)
+        server.sendmail(_from, to, email_text)
+        server.close()
+
+        print('Error Email Sent!')
+    except Exception:
+        print('Something went wrong...')
 
 
 # **************************************************************************************************************** #
@@ -304,7 +233,8 @@ def scrape_general_player_info(soup, link):
                 elif 'Forward' in p1 and 'Small' not in p1 and 'Power' not in p1:
                     p1 = 'Small Forward'
                 p2, p3 = np.nan, np.nan
-            p1, p2, p3 = positions_to_abbr[p1], positions_to_abbr[p2], positions_to_abbr[p3]
+            p1, p2, p3 = gen_bball_info.positions_to_abbr[p1], gen_bball_info.positions_to_abbr[p2],\
+                         gen_bball_info.positions_to_abbr[p3]
 
             height, weight = rows[i + 1].get_text().strip().split('(')[0].split(',')
             weight = int(weight.strip().replace('lb', ''))
@@ -347,7 +277,7 @@ def scrape_per_game_stats(soup, link, game_type):
                     team = td.get_text().strip()
                     if team == 'TOT':
                         break
-                    per_game_stats_season.extend([abbr_to_team_id[team]])
+                    per_game_stats_season.extend([team_names_and_ids.abbr_to_team_id[team]])
                 elif i in int_ind:
                     if td.get_text().strip() != '':
                         per_game_stats_season.append(int(td.get_text().strip()))
@@ -372,6 +302,11 @@ def scrape_stats(soup, link, ind, game_type, skip_ind=(2, 3, 4, 5, 6), int_ind=[
     comments = soup.find_all(string=lambda text: isinstance(text, Comment))
     comments = [comment for comment in comments if len(comment) > 5000]
 
+    # for players that haven't played in a game yet
+    if len(comments) < 2:
+        return []
+
+    # totals included on page vs not included on page
     if BeautifulSoup(comments[1], 'lxml').find('div', id='div_totals'):
         if len(comments) > ind + 1:
             soup = BeautifulSoup(comments[ind+1], 'lxml')
@@ -408,7 +343,7 @@ def scrape_stats(soup, link, ind, game_type, skip_ind=(2, 3, 4, 5, 6), int_ind=[
                     team = td.get_text().strip()
                     if team == 'TOT':
                         break
-                    stats_seasons.extend([abbr_to_team_id[team]])
+                    stats_seasons.extend([team_names_and_ids.abbr_to_team_id[team]])
                 else:
                     if td.get_text().strip() != '':
                         stats_seasons.append(float(td.get_text().strip()))
@@ -437,7 +372,7 @@ def scrape_on_off_stats(soup, link, gametype, season):
             for k, td in enumerate(tr.find_all('td')):
                 if j == 0 and k == 0:
                     team = td.a.get_text().strip()
-                    team_on_off_stats.extend([abbr_to_team_id[team]])
+                    team_on_off_stats.extend([team_names_and_ids.abbr_to_team_id[team]])
                 elif k == 1 or (k == 0 and j != 0):
                     continue
                 else:
@@ -451,12 +386,12 @@ def scrape_on_off_stats(soup, link, gametype, season):
 
 
 def delete_player_stats_table_rows(c, tablename, playerid, season, gametypeid, teamid):
-    c.execute('''DELETE FROM {tn}
+    c.execute("""DELETE FROM {tn}
                  WHERE PlayerID = {pid} AND
                  Season = {s} AND
                  GameTypeID = {gtid} AND
                  TeamID = {tid};
-    '''.format(tn=tablename, pid=playerid, s=season, gtid=gametypeid, tid=teamid))
+    """.format(tn=tablename, pid=playerid, s=season, gtid=gametypeid, tid=teamid))
 
 
 def scrape_and_update_player_stats(c, con):
@@ -465,7 +400,10 @@ def scrape_and_update_player_stats(c, con):
     per_game_stats, shooting_stats, pbp_stats, on_off_stats = [], [], [], []
 
     global player_links
+    count = 1
+    total = len(player_links)
     for link in player_links:
+        print("{}/{}".format(count, total))
         addr = base_addr + link
         print(addr)
         try:
@@ -477,7 +415,8 @@ def scrape_and_update_player_stats(c, con):
 
         if link not in gen_info_player_links:
             general_info.append(scrape_general_player_info(soup.find(id='info'), link))
-        per_game_stats += scrape_per_game_stats(soup.find(id='per_game'), link, 1)
+        if soup.find(id='per_game'):
+            per_game_stats += scrape_per_game_stats(soup.find(id='per_game'), link, 1)
         per_36_min_stats += scrape_stats(soup, link, 1, 1)
         per_100_pos_stats += scrape_stats(soup, link, 2, 1, skip_ind=(2, 3, 4, 5, 6, 28))
         adv_stats += scrape_stats(soup, link, 3, 1, skip_ind=(2, 3, 4, 5, 18, 23))
@@ -514,48 +453,50 @@ def scrape_and_update_player_stats(c, con):
         #     on_off_stats += scrape_on_off_stats(soup.find('table', id='on-off-post'),
         #                                                link, 2, 2017)
 
+        count += 1
+
     if general_info:
-        general_info_df = pd.DataFrame(data=general_info, columns=general_player_info_cols)
+        general_info_df = pd.DataFrame(data=general_info, columns=table_column_names.general_player_info_cols)
         general_info_df.set_index('PlayerID', inplace=True, verify_integrity=True)
         general_info_df.to_sql(name='GeneralPlayerInfo', con=c, if_exists='append')
 
-    per_game_stats_df = pd.DataFrame(data=per_game_stats, columns=per_game_cols)
+    per_game_stats_df = pd.DataFrame(data=per_game_stats, columns=table_column_names.per_game_cols)
     for ind, row in per_game_stats_df.iterrows():
         delete_player_stats_table_rows(c, 'PlayerSeasonStatsPerGameYTD', row['PlayerID'], row['Season'],
                                        row['GameTypeID'], row['TeamID'])
     per_game_stats_df.to_sql(name='PlayerSeasonStatsPerGameYTD', con=con, if_exists='append', index=False)
 
-    per_36_mins_df = pd.DataFrame(data=per_36_min_stats, columns=per_36_min_cols)
+    per_36_mins_df = pd.DataFrame(data=per_36_min_stats, columns=table_column_names.per_36_min_cols)
     for ind, row in per_36_mins_df.iterrows():
         delete_player_stats_table_rows(c, 'PlayerSeasonStatsPer36MinutesYTD', row['PlayerID'], row['Season'],
                                        row['GameTypeID'], row['TeamID'])
     per_36_mins_df.to_sql(name='PlayerSeasonStatsPer36MinutesYTD', con=con, if_exists='append', index=False)
 
-    per_100_pos_df = pd.DataFrame(data=per_100_pos_stats, columns=per_100_poss_cols)
+    per_100_pos_df = pd.DataFrame(data=per_100_pos_stats, columns=table_column_names.per_100_poss_cols)
     for ind, row in per_100_pos_df.iterrows():
         delete_player_stats_table_rows(c, 'PlayerSeasonStatsPer100PossYTD', row['PlayerID'], row['Season'],
                                        row['GameTypeID'], row['TeamID'])
     per_100_pos_df.to_sql(name='PlayerSeasonStatsPer100PossYTD', con=con, if_exists='append', index=False)
 
-    adv_stats_df = pd.DataFrame(data=adv_stats, columns=adv_cols)
+    adv_stats_df = pd.DataFrame(data=adv_stats, columns=table_column_names.adv_cols)
     for ind, row in adv_stats_df.iterrows():
         delete_player_stats_table_rows(c, 'PlayerSeasonAdvStatsYTD', row['PlayerID'], row['Season'],
                                        row['GameTypeID'], row['TeamID'])
     adv_stats_df.to_sql(name='PlayerSeasonAdvStatsYTD', con=con, if_exists='append', index=False)
 
-    shooting_stats_df = pd.DataFrame(data=shooting_stats, columns=shooting_cols)
+    shooting_stats_df = pd.DataFrame(data=shooting_stats, columns=table_column_names.shooting_cols)
     for ind, row in shooting_stats_df.iterrows():
         delete_player_stats_table_rows(c, 'PlayerSeasonShootingStatsYTD', row['PlayerID'], row['Season'],
                                        row['GameTypeID'], row['TeamID'])
     shooting_stats_df.to_sql(name='PlayerSeasonShootingStatsYTD', con=con, if_exists='append', index=False)
 
-    pbp_stats_df = pd.DataFrame(data=pbp_stats, columns=pbp_cols)
+    pbp_stats_df = pd.DataFrame(data=pbp_stats, columns=table_column_names.pbp_cols)
     for ind, row in pbp_stats_df.iterrows():
         delete_player_stats_table_rows(c, 'PlayerSeasonPBPStatsYTD', row['PlayerID'], row['Season'],
                                        row['GameTypeID'], row['TeamID'])
     pbp_stats_df.to_sql(name='PlayerSeasonPBPStatsYTD', con=con, if_exists='append', index=False)
 
-    on_off_stats_df = pd.DataFrame(data=on_off_stats, columns=on_off_cols)
+    on_off_stats_df = pd.DataFrame(data=on_off_stats, columns=table_column_names.on_off_cols)
     for ind, row in on_off_stats_df.iterrows():
         delete_player_stats_table_rows(c, 'PlayerSeasonOnOffStatsYTD', row['PlayerID'], row['Season'],
                                        row['GameTypeID'], row['TeamID'])
@@ -570,6 +511,122 @@ def scrape_and_update_player_stats(c, con):
 # **************************************************************************************************************** #
 # **************************************************************************************************************** #
 
+def scrape_team_general_info(soup, team, year):
+    general_info = [team, team_names_and_ids.abbr_to_team_id[team], year]
+    offset = 0
+    if 'Last Game:' in soup.get_text():
+        offset = 1
+    ps = soup.find_all('p')
+    wins, losses = map(int, ps[2].get_text().split(':')[1].split(',')[0].strip().split('-'))
+    general_info.extend([wins + losses, wins, losses])
+    division_rank = int(ps[2].get_text().split('Finished')\
+        [1].split(' in ')[0].split('th')[0].split('st')[0].split('nd')[0].split('rd')[0].strip())
+    division = ps[2].get_text().split('NBA')[1].split()[0].strip()
+    if division in ['Atlantic', 'Central', 'Southeast']:
+        conference = 'Eastern'
+        conference_id = gen_bball_info.conference_to_conf_id[conference]
+    elif division in ['Northwest', 'Pacific', 'Southwest', 'Midwest']:
+        conference = 'Western'
+        conference_id = gen_bball_info.conference_to_conf_id[conference]
+    if division in ['Eastern', 'Western']:
+        conference = division
+        conference_id = gen_bball_info.conference_to_conf_id[conference]
+        conference_rank = division_rank
+        division = 'N/A'
+        division_id = 'N/A'
+        division_rank = 'N/A'
+    else:
+        division_id = gen_bball_info.division_to_div_id[division]
+        conference_rank = 'N/A'
+    general_info.extend([division, division_id, division_rank,
+                         conference, conference_id, conference_rank])
+
+    coach_1 = ps[3 + offset].get_text().split(':')[1].split('(')[0].strip()
+    coach_1_wins, coach_1_losses = map(int, ps[3 + offset].get_text().split('(')[1].split(')')[0].split('-'))
+    if ',' in ps[3 + offset].get_text():
+        coach_2 = ps[3 + offset].get_text().split(',')[1].split('(')[0].strip()
+        coach_2_wins, coach_2_losses = map(int, ps[3 + offset].get_text().split(',')[1].split('(')[1].split(')')[0].split('-'))
+    else:
+        coach_2, coach_2_wins, coach_2_losses = 'N/A', 'N/A', 'N/A'
+    general_info.extend([coach_1, coach_1_wins, coach_1_losses,
+                         coach_2, coach_2_wins, coach_2_losses])
+
+    if len(ps) == 10 + offset:
+        playoffs = ps[9 + offset].get_text().split('(Series Stats)')[:-1]
+        if len(playoffs) == 4:
+            finals_wins, finals_losses = map(int, playoffs[0].split('(')[1].split(')')[0].split('-'))
+            finals_opp = team_names_and_ids.teams_to_abbr[playoffs[0].split('versus')[1].strip()]
+            won_finals = finals_wins > finals_losses
+            conf_finals_wins, conf_finals_losses = map(int, playoffs[1].split('(')[1].split(')')[0].split('-'))
+            conf_finals_opp = team_names_and_ids.teams_to_abbr[playoffs[1].split('versus')[1].strip()]
+            won_conf_finals = True
+            conf_semis_wins, conf_semis_losses = map(int, playoffs[2].split('(')[1].split(')')[0].split('-'))
+            conf_semis_opp = team_names_and_ids.teams_to_abbr[playoffs[2].split('versus')[1].strip()]
+            won_conf_semis = True
+            first_round_wins, first_round_losses = map(int, playoffs[3].split('(')[1].split(')')[0].split('-'))
+            first_round_opp = team_names_and_ids.teams_to_abbr[playoffs[3].split('versus')[1].strip()]
+            won_first_round = True
+        elif len(playoffs) == 3:
+            finals_wins, finals_losses = 'N/A', 'N/A'
+            finals_opp = 'N/A'
+            won_finals = 'N/A'
+            conf_finals_wins, conf_finals_losses = map(int, playoffs[0].split('(')[1].split(')')[0].split('-'))
+            conf_finals_opp = team_names_and_ids.teams_to_abbr[playoffs[0].split('versus')[1].strip()]
+            won_conf_finals = conf_finals_wins > conf_finals_losses
+            conf_semis_wins, conf_semis_losses = map(int, playoffs[1].split('(')[1].split(')')[0].split('-'))
+            conf_semis_opp = team_names_and_ids.teams_to_abbr[playoffs[1].split('versus')[1].strip()]
+            won_conf_semis = True
+            first_round_wins, first_round_losses = map(int, playoffs[2].split('(')[1].split(')')[0].split('-'))
+            first_round_opp = team_names_and_ids.teams_to_abbr[playoffs[2].split('versus')[1].strip()]
+            won_first_round = True
+        elif len(playoffs) == 2:
+            finals_wins, finals_losses = 'N/A', 'N/A'
+            finals_opp = 'N/A'
+            won_finals = 'N/A'
+            conf_finals_wins, conf_finals_losses = 'N/A', 'N/A'
+            conf_finals_opp = 'N/A'
+            won_conf_finals = 'N/A'
+            conf_semis_wins, conf_semis_losses = map(int, playoffs[0].split('(')[1].split(')')[0].split('-'))
+            conf_semis_opp = team_names_and_ids.teams_to_abbr[playoffs[0].split('versus')[1].strip()]
+            won_conf_semis = conf_semis_wins > conf_semis_losses
+            first_round_wins, first_round_losses = map(int, playoffs[1].split('(')[1].split(')')[0].split('-'))
+            first_round_opp = team_names_and_ids.teams_to_abbr[playoffs[1].split('versus')[1].strip()]
+            won_first_round = True
+        else:
+            finals_wins, finals_losses = 'N/A', 'N/A'
+            finals_opp = 'N/A'
+            won_finals = 'N/A'
+            conf_finals_wins, conf_finals_losses = 'N/A', 'N/A'
+            conf_finals_opp = 'N/A'
+            won_conf_finals = 'N/A'
+            conf_semis_wins, conf_semis_losses = 'N/A', 'N/A'
+            conf_semis_opp = 'N/A'
+            won_conf_semis = 'N/A'
+            first_round_wins, first_round_losses = map(int, playoffs[0].split('(')[1].split(')')[0].split('-'))
+            first_round_opp = team_names_and_ids.teams_to_abbr[playoffs[0].split('versus')[1].strip()]
+            won_first_round = first_round_wins > first_round_losses
+    else:
+        finals_wins, finals_losses = 'N/A', 'N/A'
+        finals_opp = 'N/A'
+        won_finals = 'N/A'
+        conf_finals_wins, conf_finals_losses = 'N/A', 'N/A'
+        conf_finals_opp = 'N/A'
+        won_conf_finals = 'N/A'
+        conf_semis_wins, conf_semis_losses = 'N/A', 'N/A'
+        conf_semis_opp = 'N/A'
+        won_conf_semis = 'N/A'
+        first_round_wins, first_round_losses = 'N/A', 'N/A'
+        first_round_opp = 'N/A'
+        won_first_round = 'N/A'
+
+    general_info.extend([first_round_wins, first_round_losses, first_round_opp, won_first_round,
+                         conf_semis_wins, conf_semis_losses, conf_semis_opp, won_conf_semis,
+                         conf_finals_wins, conf_finals_losses, conf_finals_opp, won_conf_finals,
+                         finals_wins, finals_losses, finals_opp, won_finals])
+    #print(general_info)
+
+    return general_info
+
 
 def scrape_team_statistics(soup, team, season):
     comments = soup.find_all(string=lambda text: isinstance(text, Comment))
@@ -583,7 +640,7 @@ def scrape_team_statistics(soup, team, season):
         opp_stats, opp_yoy_improvement = \
             scrape_opp_stats(BeautifulSoup(comments[2], 'lxml'))
 
-        team_adv_stats = scrape_team_adv_stats(BeautifulSoup(comments[3], 'lxml'))
+        team_adv_stats = scrape_team_adv_stats(BeautifulSoup(comments[3], 'lxml'), season)
     else:
         team_stats, team_yoy_improvement = \
             scrape_team_stats(BeautifulSoup(comments[1], 'lxml'))
@@ -591,11 +648,11 @@ def scrape_team_statistics(soup, team, season):
         opp_stats, opp_yoy_improvement = \
             scrape_opp_stats(BeautifulSoup(comments[1], 'lxml'))
 
-        team_adv_stats = scrape_team_adv_stats(BeautifulSoup(comments[2], 'lxml'))
+        team_adv_stats = scrape_team_adv_stats(BeautifulSoup(comments[2], 'lxml'), season)
 
-    return [abbr_to_team_id[team], season] + team_stats + team_yoy_improvement,\
-           [abbr_to_team_id[team], season] + opp_stats + opp_yoy_improvement,\
-           [abbr_to_team_id[team], season] + team_adv_stats
+    return [team_names_and_ids.abbr_to_team_id[team], season] + team_stats + team_yoy_improvement,\
+           [team_names_and_ids.abbr_to_team_id[team], season] + opp_stats + opp_yoy_improvement,\
+           [team_names_and_ids.abbr_to_team_id[team], season] + team_adv_stats
 
 
 def scrape_team_stats(soup):
@@ -618,7 +675,12 @@ def scrape_opp_stats(soup):
     return opp_stats, opp_yoy_improvement
 
 
-def scrape_team_adv_stats(soup):
+def scrape_team_adv_stats(soup, year):
+    # in 2017, adv stat table includes wins and losses as first two stats
+    if year > 2016:
+        return [int(td.get_text()) if i in [0, 1] else float(td.get_text())
+                for i, td in enumerate(soup.find_all('tr')[2].find_all('td')[2:-2])]
+
     return [int(td.get_text()) if i in [0, 1] else float(td.get_text())
             for i, td in enumerate(soup.find_all('tr')[2].find_all('td')[:-2])]
 
@@ -632,9 +694,9 @@ def scrape_team_lineups(soup, team, year):
         soup = BeautifulSoup(comment, 'html.parser')
         for tr in soup.find_all('tr'):
             if i <= 3:
-                lineup = [abbr_to_team_id[team], year, 1]
+                lineup = [team_names_and_ids.abbr_to_team_id[team], year, 1]
             else:
-                lineup = [abbr_to_team_id[team], year, 2]
+                lineup = [team_names_and_ids.abbr_to_team_id[team], year, 2]
             for j, td in enumerate(tr.find_all('td')):
                 if j == 0:
                     players = []
@@ -669,14 +731,15 @@ def scrape_team_lineups(soup, team, year):
 
     return team_lineups
 
+
 def delete_all_team_table_rows(c, tablename):
-    c.execute('''DELETE FROM {};'''.format(tablename))
+    c.execute("DELETE FROM {};".format(tablename))
 
 
 def scrape_and_update_team_stats(c, con):
     base_addr = 'http://www.basketball-reference.com/teams/'
     general_info, team_stats, opp_stats, team_adv_stats, team_lineups = [], [], [], [], []
-    for team in teams:
+    for team in team_names_and_ids.teams:
         year = 2017
         print(year, team)
         addr = base_addr + team + '/' + str(year) + '.html'
@@ -686,6 +749,8 @@ def scrape_and_update_team_stats(c, con):
             print(e.code)
             continue
         soup = BeautifulSoup(resp.read(), 'lxml')
+        # team_general_info = scrape_team_general_info(soup.find(id='info'), team, year)
+        # general_info.append(team_general_info)
         team_stat, opp_stat, adv_stat = scrape_team_statistics(soup, team, year)
         team_stats.append(team_stat)
         opp_stats.append(opp_stat)
@@ -701,12 +766,13 @@ def scrape_and_update_team_stats(c, con):
         team_lineup_combos = scrape_team_lineups(soup, team, year)
         team_lineups += team_lineup_combos
 
-    # general_info_df = pd.DataFrame(data=general_info, columns=team_gen_info_cols)
-    team_stats_df = pd.DataFrame(data=team_stats, columns=team_stats_cols)
-    opp_stats_df = pd.DataFrame(data=opp_stats, columns=team_stats_cols)
-    team_adv_stats_df = pd.DataFrame(data=team_adv_stats, columns=team_adv_cols)
-    team_lineups_df = pd.DataFrame(data=team_lineups, columns=team_lineups_cols)
+    # general_info_df = pd.DataFrame(data=general_info, columns=table_column_names.team_gen_info_cols)
+    team_stats_df = pd.DataFrame(data=team_stats, columns=table_column_names.team_stats_cols)
+    opp_stats_df = pd.DataFrame(data=opp_stats, columns=table_column_names.team_stats_cols)
+    team_adv_stats_df = pd.DataFrame(data=team_adv_stats, columns=table_column_names.team_adv_cols)
+    team_lineups_df = pd.DataFrame(data=team_lineups, columns=table_column_names.team_lineups_cols)
 
+    # delete_all_team_table_rows(c, 'GeneralTeamSeasonInfo')
     # general_info_df.set_index(['TeamID', 'Season'], inplace=True, verify_integrity=True)
     # general_info_df.to_sql(name='GeneralTeamSeasonInfo', con=c, if_exists='append')
 
@@ -845,7 +911,7 @@ def scrape_basic_player_stats(home_soup, away_soup, home_team, away_team):
             if i == 0:
                 if ':' not in td.get_text():
                     break
-                temp_home_player_stats.append(int(td.get_text().split(':')[0]))
+                temp_home_player_stats.append(td.get_text().strip())
             elif i in float_ind:
                 if td.get_text() == '':
                     temp_home_player_stats.append(float(0))
@@ -857,7 +923,7 @@ def scrape_basic_player_stats(home_soup, away_soup, home_team, away_team):
                 else:
                     temp_home_player_stats.append(int(td.get_text()))
         if temp_home_player_stats:
-            temp_home_player_stats.insert(0, abbr_to_team_id[home_team])
+            temp_home_player_stats.insert(0, team_names_and_ids.abbr_to_team_id[home_team])
             temp_home_player_stats.insert(0, player_link)
             temp_home_player_stats.insert(0, player_id)
             if len(temp_home_player_stats) == 22:
@@ -881,7 +947,7 @@ def scrape_basic_player_stats(home_soup, away_soup, home_team, away_team):
             if i == 0:
                 if ':' not in td.get_text():
                     break
-                temp_away_player_stats.append(int(td.get_text().split(':')[0]))
+                temp_away_player_stats.append(td.get_text().strip())
             elif i in float_ind:
                 if td.get_text() == '':
                     temp_away_player_stats.append(float(0))
@@ -893,7 +959,7 @@ def scrape_basic_player_stats(home_soup, away_soup, home_team, away_team):
                 else:
                     temp_away_player_stats.append(int(td.get_text()))
         if temp_away_player_stats:
-            temp_away_player_stats.insert(0, abbr_to_team_id[away_team])
+            temp_away_player_stats.insert(0, team_names_and_ids.abbr_to_team_id[away_team])
             temp_away_player_stats.insert(0, player_link)
             temp_away_player_stats.insert(0, player_id)
             if len(temp_away_player_stats) == 22:
@@ -913,18 +979,20 @@ def scrape_team_stats_per_game(soup, game_id, season):
 
     g_type = get_game_type(BeautifulSoup(comments[0], 'lxml').encode('utf-8')[:200])
 
+    pace = float(BeautifulSoup(comments[2], 'lxml').find_all('td', {'data-stat': 'pace'})[0].get_text().strip())
+
     home_team_div_id = "box_" + home_team.lower() + "_basic"
     away_team_div_id = "box_" + away_team.lower() + "_basic"
-    home_team_basic_stats, away_team_basic_stats = scrape_basic_team_stats(soup.find(id=home_team_div_id).find('tfoot'),
+    home_basic_stats, away_basic_stats = scrape_basic_team_stats(soup.find(id=home_team_div_id).find('tfoot'),
                                                                            soup.find(id=away_team_div_id).find('tfoot'))
 
     home_team_div_id = "box_" + home_team.lower() + "_advanced"
     away_team_div_id = "box_" + away_team.lower() + "_advanced"
-    home_team_adv_stats, away_team_adv_stats = scrape_adv_team_stats(soup.find(id=home_team_div_id).find('tfoot'),
+    home_adv_stats, away_adv_stats = scrape_adv_team_stats(soup.find(id=home_team_div_id).find('tfoot'),
                                                                      soup.find(id=away_team_div_id).find('tfoot'))
 
-    return [game_id] + [int(season)] + [g_date] + [g_type] + home_score + home_team_basic_stats + home_team_adv_stats,\
-           [game_id] + [int(season)] + [g_date] + [g_type] + away_score + away_team_basic_stats + away_team_adv_stats
+    return [game_id, int(season), g_date, g_type, 1] + home_score + home_basic_stats + [pace] + home_adv_stats,\
+           [game_id, int(season), g_date, g_type, 0] + away_score + away_basic_stats + [pace] + away_adv_stats
 
 
 def get_game_type(string):
@@ -1014,8 +1082,8 @@ def scrape_game_score(soup, home_team):
         team2_score[-3] += team2_score[-2]
         del team2_score[-2]
 
-    team1_score.insert(1, abbr_to_team_id[team1_score[0]])
-    team2_score.insert(1, abbr_to_team_id[team2_score[0]])
+    team1_score.insert(1, team_names_and_ids.abbr_to_team_id[team1_score[0]])
+    team2_score.insert(1, team_names_and_ids.abbr_to_team_id[team2_score[0]])
 
     if team1_score[0] == home_team:
         return team1_score, team2_score
@@ -1026,12 +1094,8 @@ def scrape_game_score(soup, home_team):
 def get_home_away_teams(header, year):
     away_team = header.get_text().split(' at ')[0].strip()
     home_team = header.get_text().split(' at ')[1].split('Box')[0].strip()
-    home_team_abbr = teams_to_abbr[home_team]
-    away_team_abbr = teams_to_abbr[away_team]
-    if home_team_abbr == 'CHH' and year > 2014:
-        home_team_abbr = 'CHO'
-    elif away_team_abbr == 'CHH' and year > 2014:
-        away_team_abbr = 'CHO'
+    home_team_abbr = team_names_and_ids.teams_to_abbr[home_team]
+    away_team_abbr = team_names_and_ids.teams_to_abbr[away_team]
     return home_team_abbr, away_team_abbr
 
 
@@ -1042,7 +1106,7 @@ def scrape_and_update_game_stats(c):
     global next_game_id
 
     year = 2017
-    for month in months:
+    for month in gen_bball_info.months:
         print(month, year)
         addr = base_addr + '/leagues/NBA_' + str(year) + '_games-' + month + '.html'
         try:
@@ -1082,27 +1146,17 @@ def scrape_and_update_game_stats(c):
         if end_flag:
             break
 
-    player_game_stats_df = pd.DataFrame(data=player_game_stats,
-                                        columns=player_stats_cols)
-    team_game_stats_df = pd.DataFrame(data=team_game_stats,
-                                      columns=team_game_stats_cols)
-
-    # *******    COMMENT OUT BELOW SECTION AFTER TESTING IS DONE
-
-    # global player_links
-    # player_links_df = pd.DataFrame(data=player_links)
-    #
-    # writer = pd.ExcelWriter('player_links_test.xlsx')
-    # player_links_df.to_excel(writer, 'Sheet1')
-    # writer.save()
+    player_game_stats_df = pd.DataFrame(data=player_game_stats, columns=table_column_names.player_stats_cols)
+    team_game_stats_df = pd.DataFrame(data=team_game_stats, columns=table_column_names.team_game_stats_cols)
 
     player_game_stats_df.to_sql(name='PlayerGameStatsYTD', con=c, if_exists='append', index=False)
     team_game_stats_df.to_sql(name='TeamGameStatsYTD', con=c, if_exists='append', index=False)
 
 
 def main():
-    conn = open_db(os.path.join('Database', 'test.db'))
-    c = conn.cursor()
+    # try:
+    conn = open_db()
+    c = conn.connect()
 
     populate_playerlink_to_playerid_dict(c)
     get_player_links_from_gen_info(c)
@@ -1114,8 +1168,13 @@ def main():
     scrape_and_update_player_stats(c, conn)
     scrape_and_update_team_stats(c, conn)
 
-    conn.commit()
-    conn.close()
+    send_confirmation_email()
+    # except Exception as e:
+    #     send_error_email()
+    #     with open('updateServiceErrors.txt', 'w') as f:
+    #         f.write('Exception Type: '.format(type(e)))
+    #         f.write('Exception Arguments: '.format(e.args))
+    #         f.write('Exception: '.format(e))
 
 
 if __name__ == "__main__":

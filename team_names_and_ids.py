@@ -1,0 +1,53 @@
+teams_to_abbr = {'Atlanta Hawks': 'ATL', 'Boston Celtics': 'BOS', 'Brooklyn Nets': 'BRK',
+                 'Charlotte Hornets': 'CHO', 'Chicago Bulls': 'CHI', 'Cleveland Cavaliers': 'CLE',
+                 'Dallas Mavericks': 'DAL', 'Denver Nuggets': 'DEN', 'Detroit Pistons': 'DET',
+                 'Golden State Warriors': 'GSW', 'Houston Rockets': 'HOU', 'Indiana Pacers': 'IND',
+                 'Los Angeles Clippers': 'LAC', 'Los Angeles Lakers': 'LAL', 'Memphis Grizzlies': 'MEM',
+                 'Miami Heat': 'MIA', 'Milwaukee Bucks': 'MIL', 'Minnesota Timberwolves': 'MIN',
+                 'New Orleans Pelicans': 'NOP', 'New York Knicks': 'NYK', 'Oklahoma City Thunder': 'OKC',
+                 'Orlando Magic': 'ORL', 'Philadelphia 76ers': 'PHI', 'Phoenix Suns': 'PHO',
+                 'Portland Trail Blazers': 'POR', 'Sacramento Kings': 'SAC', 'San Antonio Spurs': 'SAS',
+                 'Toronto Raptors': 'TOR', 'Utah Jazz': 'UTA', 'Washington Wizards': 'WAS',
+                 'New Jersey Nets': 'NJN', 'Charlotte Bobcats': 'CHA', 'Vancouver Grizzlies': 'VAN',
+                 'New Orleans/Oklahoma City Hornets': 'NOK', 'Seattle SuperSonics': 'SEA',
+                 'New Orleans Hornets': 'NOH'}
+
+abbr_to_teams = {'ATL': 'Atlanta Hawks', 'BOS': 'Boston Celtics', 'BRK': 'Brooklyn Nets',
+                 'CHH': 'Charlotte Hornets', 'CHI': 'Chicago Bulls', 'CLE': 'Cleveland Cavaliers',
+                 'DAL': 'Dallas Mavericks', 'DEN': 'Denver Nuggets', 'DET': 'Detroit Pistons',
+                 'GSW': 'Golden State Warriors', 'HOU': 'Houston Rockets', 'IND': 'Indiana Pacers',
+                 'LAC': 'Los Angeles Clippers', 'LAL': 'Los Angeles Lakers', 'MEM': 'Memphis Grizzlies',
+                 'MIA': 'Miami Heat', 'MIL': 'Milwaukee Bucks', 'MIN': 'Minnesota Timberwolves',
+                 'NOP': 'New Orleans Pelicans', 'NYK': 'New York Knicks', 'OKC': 'Oklahoma City Thunder',
+                 'ORL': 'Orlando Magic', 'PHI': 'Philadelphia 76ers', 'PHO': 'Phoenix Suns',
+                 'POR': 'Portland Trail Blazers', 'SAC': 'Sacramento Kings', 'SAS': 'San Antonio Spurs',
+                 'TOR': 'Toronto Raptors', 'UTA': 'Utah Jazz', 'WAS': 'Washington Wizards',
+                 'NJN': 'New Jersey Nets', 'CHA': 'Charlotte Bobcats', 'VAN': 'Vancouver Grizzlies',
+                 'NOK': 'New Orleans/Oklahoma City Hornets', 'SEA': 'Seattle SuperSonics',
+                 'CHO': 'Charlotte Hornets', 'NOH': 'New Orleans Hornets'}
+
+teams_to_team_id = {'Atlanta Hawks': 1, 'Boston Celtics': 2, 'Brooklyn Nets': 3,
+                    'Charlotte Hornets': 4, 'Chicago Bulls': 5, 'Cleveland Cavaliers': 6,
+                    'Dallas Mavericks': 7, 'Denver Nuggets': 8, 'Detroit Pistons': 9,
+                    'Golden State Warriors': 10, 'Houston Rockets': 11, 'Indiana Pacers': 12,
+                    'Los Angeles Clippers': 13, 'Los Angeles Lakers': 14, 'Memphis Grizzlies': 15,
+                    'Miami Heat': 16, 'Milwaukee Bucks': 17, 'Minnesota Timberwolves': 18,
+                    'New Orleans Pelicans': 19, 'New York Nnicks': 20, 'Oklahoma City Thunder': 21,
+                    'Orlando Magic': 22, 'Philadelphia 76ers': 23, 'Phoenix Suns': 24,
+                    'Portland Trail Blazers': 25, 'Sacramento Kings': 26, 'San Antonio Spurs': 27,
+                    'Toronto Raptors': 28, 'Utah Jazz': 29, 'Washington Wizards': 30,
+                    'New Jersey Nets': 3, 'Charlotte Bobcats': 4, 'Vancouver Grizzlies': 15,
+                    'New Orleans/Oklahoma City Hornets': 19, 'Seattle SuperSonics': 21,
+                    'New Orleans Hornets': 19}
+
+abbr_to_team_id = {'ATL': 1, 'BOS': 2, 'BRK': 3, 'CHH': 4, 'CHI': 5, 'CLE': 6,
+                   'DAL': 7, 'DEN': 8, 'DET': 9, 'GSW': 10, 'HOU': 11, 'IND': 12,
+                   'LAC': 13, 'LAL': 14, 'MEM': 15, 'MIA': 16, 'MIL': 17, 'MIN': 18,
+                   'NOP': 19, 'NYK': 20, 'OKC': 21, 'ORL': 22, 'PHI': 23, 'PHO': 24,
+                   'POR': 25, 'SAC': 26, 'SAS': 27, 'TOR': 28, 'UTA': 29, 'WAS': 30,
+                   'NJN': 3, 'CHA': 4, 'CHO': 4, 'VAN': 15, 'NOK': 19, 'SEA': 21,
+                   'NOH': 19, 'WSB': 30, 'KCK': 26}
+
+teams = ['ATL', 'BOS', 'BRK', 'CHH', 'CHI', 'CLE', 'DAL', 'DEN', 'DET', 'GSW', 'HOU', 'IND',
+         'LAC', 'LAL', 'MEM', 'MIA', 'MIL', 'MIN', 'NOP', 'NYK', 'OKC', 'ORL', 'PHI', 'PHO',
+         'POR', 'SAC', 'SAS', 'TOR', 'UTA', 'WAS', 'NJN', 'CHA', 'CHO', 'VAN', 'NOK', 'SEA']
